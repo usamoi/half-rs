@@ -35,11 +35,6 @@ pub(crate) mod arch;
 #[derive(Clone, Copy, Default)]
 #[repr(transparent)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
-#[cfg_attr(
-    feature = "rkyv",
-    derive(rkyv::Archive, rkyv::Serialize, rkyv::Deserialize)
-)]
-#[cfg_attr(feature = "rkyv", archive(resolver = "F16Resolver"))]
 #[cfg_attr(feature = "bytemuck", derive(Zeroable, Pod))]
 #[cfg_attr(feature = "zerocopy", derive(AsBytes, FromBytes))]
 #[cfg_attr(kani, derive(kani::Arbitrary))]
@@ -1334,6 +1329,45 @@ impl<'de> serde::de::Visitor<'de> for Visitor {
         E: serde::de::Error,
     {
         Ok(f16::from_f64(v))
+    }
+}
+
+#[cfg(feature = "rkyv")]
+impl rkyv::Archive for f16 {
+    type Archived = f16;
+
+    type Resolver = ();
+
+    #[inline]
+    unsafe fn resolve(&self, _: usize, _: Self::Resolver, out: *mut Self::Archived) {
+        use core::sync::atomic::Ordering;
+        out.write(rkyv::to_archived!(*self));
+    }
+}
+
+#[cfg(feature = "rkyv")]
+impl<S: rkyv::Fallible + ?Sized> rkyv::Serialize<S> for f16 {
+    #[inline]
+    fn serialize(&self, _: &mut S) -> Result<Self::Resolver, S::Error> {
+        Ok(())
+    }
+}
+
+#[cfg(feature = "rkyv")]
+impl<D: rkyv::Fallible + ?Sized> rkyv::Deserialize<f16, D> for rkyv::Archived<f16> {
+    #[inline]
+    fn deserialize(&self, _: &mut D) -> Result<f16, D::Error> {
+        Ok(rkyv::from_archived!(*self).into())
+    }
+}
+
+#[cfg(feature = "rkyv")]
+impl<C: ?Sized> rkyv::CheckBytes<C> for f16 {
+    type Error = std::convert::Infallible;
+
+    #[inline]
+    unsafe fn check_bytes<'a>(value: *const Self, _: &mut C) -> Result<&'a Self, Self::Error> {
+        Ok(&*value)
     }
 }
 
