@@ -20,7 +20,7 @@ use core::{
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "zerocopy")]
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy_derive::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 pub(crate) mod arch;
 
@@ -36,7 +36,10 @@ pub(crate) mod arch;
 #[repr(transparent)]
 #[cfg_attr(feature = "serde", derive(Serialize))]
 #[cfg_attr(feature = "bytemuck", derive(Zeroable, Pod))]
-#[cfg_attr(feature = "zerocopy", derive(AsBytes, FromBytes))]
+#[cfg_attr(
+    feature = "zerocopy",
+    derive(FromBytes, Immutable, IntoBytes, KnownLayout)
+)]
 #[cfg_attr(kani, derive(kani::Arbitrary))]
 pub struct f16(u16);
 
